@@ -373,7 +373,7 @@ def get_dg_codon_dict(aas, keep_or_remove='keep', compression='rank', rank=2):
     codon_order = list(new_dict.keys())
     codon_count = BuildCodonCount(new_dict, codon_order)
 
-    rank_method = 'R' if args.compression == 'rank' else 'U'
+    rank_method = 'R' if compression == 'rank' else 'U'
     best_result = start_multiprocessing(new_dict, rules_dict, rank_method, codon_count, redundancy=0, processes=3)
 
     exploded_codons = expand_codons(best_result['BestReducedList'], RULES)
