@@ -359,6 +359,18 @@ def expand_codons(best_reduced_list, rules):
             exploded_codons[key].append(joined_codon)
     return exploded_codons
 
+def load_ecoli_codons():
+    sorted_dict = util.BuildUsageDict('dynamcc/ecoli_codons.txt')
+    return sorted_dict
+
+def get_aa_top1_codon(aa, sorted_dict,):
+    try:
+        return sorted_dict[aa][0][0]
+    except KeyError:
+        print(f"Invalid amino acid: {aa} with {sorted_dict[aa]}")
+        return None
+
+
 def get_dg_codon_dict(aas, keep_or_remove='keep', compression='rank', rank=2):
     remove_aa = aas if keep_or_remove is False else list(set(NAT_AAs) - set(aas))
     sorted_dict = util.BuildUsageDict('dynamcc/ecoli_codons.txt')
