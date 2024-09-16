@@ -365,10 +365,10 @@ def load_ecoli_codons():
 
 def get_aa_top1_codon(aa, sorted_dict,):
     try:
-        return sorted_dict[aa][0][0]
+        return sorted_dict[aa][0][0], None
     except KeyError:
         print(f"Invalid amino acid: {aa} with {sorted_dict[aa]}")
-        return None
+        return None, None
 
 
 def get_dg_codon_dict(aas, keep_or_remove='keep', compression='rank', rank=2):
@@ -389,16 +389,8 @@ def get_dg_codon_dict(aas, keep_or_remove='keep', compression='rank', rank=2):
     best_result = start_multiprocessing(new_dict, rules_dict, rank_method, codon_count, redundancy=0, processes=3)
 
     exploded_codons = expand_codons(best_result['BestReducedList'], RULES)
-    print(f"Exploded codons: {exploded_codons}")
-
-    codon_dict = util.BuildCodonDict(sorted_dict)
     
-    for dg_codon in exploded_codons: 
-        print(f"DG codon: {dg_codon}")
-        for codon in exploded_codons[dg_codon]:
-            print(f"codon: {codon}, rank: {codon_dict[codon]}")
-    
-    return exploded_codons
+    return exploded_codons, sorted_dict
 
 
 
@@ -412,7 +404,15 @@ def main(args):
     assert args.compression in ['rank', 'usage'], 'Invalid compression argument'
     assert args.rank > 0, 'Invalid rank argument'
 
-    get_dg_codon_dict(aas, args.keep_or_remove, args.compression, args.rank)
+    exploded_codons, sorted_dict = get_dg_codon_dict(aas, args.keep_or_remove, args.compression, args.rank)
+    print(f"Exploded codons: {exploded_codons}")
+
+    codon_dict = util.BuildCodonDict(sorted_dict)
+    
+    for dg_codon in exploded_codons: 
+        print(f"DG codon: {dg_codon}")
+        for codon in exploded_codons[dg_codon]:
+            print(f"codon: {codon}, rank: {codon_dict[codon]}")
 
 
 def get_args():
