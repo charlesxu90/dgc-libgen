@@ -9,7 +9,7 @@ pip install -e .
 ```
 
 ## Examples
-See [`examples`](examples/) directory for examples.
+See [`examples`](examples) directory for examples.
 See [`example.ipynb`](example.ipynb) to see how to execute the example.
 
 Simple usage as follows:
