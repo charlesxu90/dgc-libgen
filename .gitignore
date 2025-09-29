@@ -8,3 +8,4 @@ data/
 figures/
 build/
 *.egg-info/
+.vscode/

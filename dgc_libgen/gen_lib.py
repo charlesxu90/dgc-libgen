@@ -109,7 +109,7 @@ def filter_pos_aa_for_library(df_top_uniq_pos,
     return df_top_uniq_pos_top
 
 
-def generate_library_for_topn_with_weblogo(data_path, 
+def generate_library_for_topn(data_path, 
                           ref_seq, 
                           wt, 
                           pred_cols=['raw_activity'], 
