@@ -37,6 +37,7 @@ from loguru import logger
 from collections import defaultdict
 from .CodonWorker import CodonWorker
 from . import util
+from loguru import logger
 
 NAT_AAs = ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'N', 'X']
 RULES = {'R': ['A', 'G'],
@@ -271,7 +272,7 @@ def codon_exploder(codon_count):
 def start_multiprocessing(new_dict, rules_dict, selection, codon_count, redundancy, processes=3):
 
     if (selection != 'R' and selection != 'U'):
-        print('Unknown ranking method selected.')
+        logger.info('Unknown ranking method selected.')
         return
 
     worker_array = []
@@ -360,21 +361,24 @@ def expand_codons(best_reduced_list, rules):
     return exploded_codons
 
 def load_ecoli_codons():
-    sorted_dict = util.BuildUsageDict('dynamcc/ecoli_codons.txt')
+    # get the script directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sorted_dict = util.BuildUsageDict(os.path.join(script_dir, 'ecoli_codons.txt'))
     return sorted_dict
 
 def get_aa_top1_codon(aa, sorted_dict,):
     try:
         return sorted_dict[aa][0][0], None
     except KeyError:
-        print(f"Invalid amino acid: {aa} with {sorted_dict[aa]}")
+        logger.info(f"Invalid amino acid: {aa} with {sorted_dict[aa]}")
         return None, None
 
 
 def get_dg_codon_dict(aas, keep_or_remove='keep', compression='rank', rank=2):
     remove_aa = aas if keep_or_remove is False else list(set(NAT_AAs) - set(aas))
-    sorted_dict = util.BuildUsageDict('dynamcc/ecoli_codons.txt')
-    rules_dict, inverse_dict = util.BuildRulesDict('dynamcc/rules.txt')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sorted_dict = util.BuildUsageDict(os.path.join(script_dir, 'ecoli_codons.txt'))
+    rules_dict, inverse_dict = util.BuildRulesDict(os.path.join(script_dir, 'rules.txt'))
     filtered_dict = util.EditUsageDict(remove_aa, sorted_dict)
 
     if compression == 'rank':
@@ -405,14 +409,14 @@ def main(args):
     assert args.rank > 0, 'Invalid rank argument'
 
     exploded_codons, sorted_dict = get_dg_codon_dict(aas, args.keep_or_remove, args.compression, args.rank)
-    print(f"Exploded codons: {exploded_codons}")
+    logger.info(f"Exploded codons: {exploded_codons}")
 
     codon_dict = util.BuildCodonDict(sorted_dict)
     
     for dg_codon in exploded_codons: 
-        print(f"DG codon: {dg_codon}")
+        logger.info(f"DG codon: {dg_codon}")
         for codon in exploded_codons[dg_codon]:
-            print(f"codon: {codon}, rank: {codon_dict[codon]}")
+            logger.info(f"codon: {codon}, rank: {codon_dict[codon]}")
 
 
 def get_args():
