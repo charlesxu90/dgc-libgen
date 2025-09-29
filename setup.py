@@ -16,5 +16,8 @@ setup(name='dcg-libgen',
             'logomaker',
             'numpy',
             'pandas',
+            'loguru',
+            'seaborn',
+            'matplotlib',
             ],
       )

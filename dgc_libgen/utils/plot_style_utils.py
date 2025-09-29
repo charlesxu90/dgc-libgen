@@ -4,7 +4,7 @@ Utilities for plotting beautiful figures.
 import matplotlib.pyplot as plt
 #import palettable as pal
 import seaborn as sns
-import pandas as pd
+# import pandas as pd
 
 CAT_PALETTE = sns.color_palette('colorblind')
 DIV_PALETTE = sns.color_palette("BrBG_r", 100)

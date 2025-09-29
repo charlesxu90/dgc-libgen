@@ -1,1 +1,1 @@
-from gen_lib import generate_library_for_topn
+from .gen_lib import generate_library_for_topn
