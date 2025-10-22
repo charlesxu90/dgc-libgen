@@ -11,20 +11,20 @@ from .utils import plot_style_utils
 
  
 def get_topn_variants(df_variants, 
-                      ref_seq, 
+                      wt_seq, 
                       topn=10000, 
                       seq_col='aa_seqs'):
     """Get the topn variants from the dataframe and annotate mutations and number of mutations.
     Args:
         df_variants (pd.DataFrame): The dataframe containing variant data.
-        ref_seq (str): The reference sequence to compare against.
+        wt_seq (str): The reference sequence to compare against.
         topn (int, optional): The number of top variants to consider. Defaults to 10000.
         seq_col (str, optional): The column name for sequences in the data. Defaults to 'aa_seqs'.
     Returns:
         pd.DataFrame: The dataframe containing the topn variants with mutations and number of mutations annotated.
     """
     df_variants_topn = df_variants.head(topn).copy()
-    df_variants_topn['mutations'] = [get_mutations(aa_seq, wt_seq=ref_seq) for aa_seq in df_variants_topn[seq_col]]
+    df_variants_topn['mutations'] = [get_mutations(aa_seq, wt_seq=wt_seq) for aa_seq in df_variants_topn[seq_col]]
     df_variants_topn['n_muts'] = [len(muts.split('/')) if '/' in muts else 0 for muts in df_variants_topn.mutations]
 
     df_variants_topn['mut_list'] = [muts.split('/') if '/' in muts else muts for muts in df_variants_topn.mutations]
@@ -51,36 +51,6 @@ def load_variants_data(data_path,
     return df_variants
 
 
-def expand_ref_mutations(df_top_uniq_pos, 
-                         ref_seq, 
-                         wt_seq):
-    """Expand the reference mutations to ensure all wild-type positions are included in the dataframe.
-    Args:
-        df_top_uniq_pos (pd.DataFrame): The dataframe containing selected positions
-        df_top1k_uniq_pos_top (pd.DataFrame): The dataframe containing selected positions
-        ref_seq (str): The reference sequence to compare against. Usually is the starting sequence for design or wild-type sequence.
-        wt_seq (str): The wild-type sequence.
-    Returns:
-        pd.DataFrame: The expanded dataframe containing all wild-type positions.
-        str: The reference mutations string.
-    """
-    ref_mutations = get_mutations(ref_seq, wt_seq=wt_seq) 
-
-    for wt_mut in ref_mutations.split('/'):
-        pos = int(wt_mut[1:-1])
-        if pos in df_top_uniq_pos.pos.values:
-            continue
-        
-        aa = wt_mut[-1]
-        logger.info(f"Position {wt_mut} of wild-type is not in the selected positions.")
-        df_new_row = pd.DataFrame({'pos':[pos], 'wt_aa': [aa], 'fix_aa': [aa], 'n_codons': [1], 'n_expanded_codons': [1],})
-        df_top_uniq_pos = pd.concat([df_top_uniq_pos, df_new_row], ignore_index=True)
-
-    logger.info(f"total positions: {len(df_top_uniq_pos)}")
-    df_top_uniq_pos.sort_values(by='pos',ascending=True)
-    return df_top_uniq_pos, ref_mutations
-
-
 def filter_pos_aa_for_library(df_top_uniq_pos, 
                               total_mutants=10000, 
                               fix_threshold=0.75, 
@@ -95,11 +65,11 @@ def filter_pos_aa_for_library(df_top_uniq_pos,
         pd.DataFrame: The filtered dataframe containing selected positions and amino acids for library design.
     """
 
-    df_top_uniq_pos_top = df_top_uniq_pos[df_top_uniq_pos['ref_count']/total_mutants <= fix_threshold].copy()
+    df_top_uniq_pos_top = df_top_uniq_pos[df_top_uniq_pos['wt_count']/total_mutants <= fix_threshold].copy()
     logger.info(f"Totally {len(df_top_uniq_pos_top)} positions are selected.")
 
     df_top_uniq_pos_top['fix_aa'] = [df_top_uniq_pos_top['mut_aa'].iloc[i][0] if df_top_uniq_pos_top['mut_aa_count'].iloc[i][0]/total_mutants >= fix_threshold else '' for i in range(len(df_top_uniq_pos_top)) ]
-    df_top_uniq_pos_top['sel_mut_aa'] = [list(aa  for aa, count in zip(row['mut_aa'], row['mut_aa_count']) if count/total_mutants >= aa_freq_threshold) + [row['ref_aa']] for i, row in df_top_uniq_pos_top.iterrows()]
+    df_top_uniq_pos_top['sel_mut_aa'] = [list(aa  for aa, count in zip(row['mut_aa'], row['mut_aa_count']) if count/total_mutants >= aa_freq_threshold) + [row['wt_aa']] for i, row in df_top_uniq_pos_top.iterrows()]
     df_top_uniq_pos_top['dg_codons'], df_top_uniq_pos_top['expanded_codons'] = zip(*df_top_uniq_pos_top.apply(get_codons_from_aa, axis=1))
     df_top_uniq_pos_top['n_codons'] = [len(codons) for codons in df_top_uniq_pos_top.dg_codons]
     df_top_uniq_pos_top['n_expanded_codons'] = [len(codons) for codons in df_top_uniq_pos_top.expanded_codons]
@@ -110,7 +80,6 @@ def filter_pos_aa_for_library(df_top_uniq_pos,
 
 
 def generate_library_for_topn(data_path, 
-                          ref_seq, 
                           wt, 
                           pred_cols=['raw_activity'], 
                           seq_col='aa_seqs', 
@@ -121,7 +90,6 @@ def generate_library_for_topn(data_path,
     """Plot the topn positions weblogo and save the position table for library design.
     Args:
         data_path (str): The path to the CSV file containing variant data.
-        ref_seq (str): The reference sequence to compare against. Usually is the starting sequence for design or wild-type sequence.
         wt (str): The wild-type sequence.
         pred_cols (list, optional): List of prediction columns to consider for ranking. Defaults to ['raw_activity'].
         seq_col (str, optional): The column name for sequences in the data. Defaults to 'aa_seqs'.
@@ -133,11 +101,11 @@ def generate_library_for_topn(data_path,
         pd.DataFrame: The dataframe containing selected positions and amino acids for library design.
     """
     df_variants = load_variants_data(data_path, pred_columns=pred_cols, seq_col=seq_col)
-    df_variants_topn = get_topn_variants(df_variants, ref_seq=ref_seq, topn=topn, seq_col=seq_col)
-    df_topn_uniq_pos = get_topn_variants_pos_df(df_variants_topn, ref_seq=ref_seq, topn=topn)
+    df_variants_topn = get_topn_variants(df_variants, wt_seq=wt, topn=topn, seq_col=seq_col)
+    df_topn_uniq_pos = get_topn_variants_pos_df(df_variants_topn, wt_seq=wt, topn=topn)
     df_topn_uniq_pos = filter_pos_aa_for_library(df_topn_uniq_pos, total_mutants=topn, fix_threshold=fix_threshold, aa_freq_threshold=aa_freq_threshold)
-    df_topn_uniq_pos, ref_mutations = expand_ref_mutations(df_topn_uniq_pos, ref_seq=ref_seq, wt_seq=wt)
-    logger.info(f"Ref mutations: {ref_mutations}")
+
+    df_topn_uniq_pos = df_topn_uniq_pos[~(df_topn_uniq_pos['wt_aa'] == df_topn_uniq_pos['fix_aa'])].reset_index(drop=True)
     
     plot_style_utils.set_pub_plot_context(context="talk")
     fig, ax = plot_style_utils.simple_ax(figsize=(14, 3))

@@ -37,8 +37,8 @@ def get_aa_pos_weight(df_topn_uniq_pos_top):
                 if aa not in row.sel_mut_aa:
                     weight_mat[aa].append(0.0)
                 else:
-                    if aa == row['ref_aa']:
-                        weight_mat[aa].append(row['ref_count'])
+                    if aa == row['wt_aa']:
+                        weight_mat[aa].append(row['wt_count'])
                     else:
                         weight_mat[aa].append(row['mut_aa_count'][row['mut_aa'].index(aa)])
 
@@ -51,12 +51,12 @@ def get_aa_pos_weight(df_topn_uniq_pos_top):
 
 
 def get_topn_variants_pos_df(df_variants_topn, 
-                             ref_seq, 
+                             wt_seq, 
                              topn=10000):
     """Get the topn unique positions dataframe from the variants dataframe.
     Args:
         df_variants_topn (pd.DataFrame): The dataframe containing the topn variants.
-        ref_seq (str): The reference sequence to compare against. Usually is the starting sequence for
+        wt_seq (str): The reference sequence to compare against. Usually is the starting sequence for
             design or wild-type sequence.
         topn (int, optional): The number of top variants to consider. Defaults to 10000.
     Returns:
@@ -78,10 +78,10 @@ def get_topn_variants_pos_df(df_variants_topn,
     # logger.info(topn_variants_uniq_pos_count)
 
     df_topn_variants_uniq_pos = pd.DataFrame(topn_variants_uniq_pos, columns=['pos'])
-    df_topn_variants_uniq_pos['ref_aa'] = [ref_seq[pos-1] for pos in df_topn_variants_uniq_pos.pos]
+    df_topn_variants_uniq_pos['wt_aa'] = [wt_seq[pos-1] for pos in df_topn_variants_uniq_pos.pos]
     df_topn_variants_uniq_pos['mut_aa'] = [list(topn_variants_uniq_pos_count[pos].keys()) for pos in df_topn_variants_uniq_pos.pos]
     df_topn_variants_uniq_pos['mut_aa_count'] = [list(topn_variants_uniq_pos_count[pos].values()) for pos in df_topn_variants_uniq_pos.pos]
-    df_topn_variants_uniq_pos['ref_count'] = topn - df_topn_variants_uniq_pos['mut_aa_count'].apply(sum)
+    df_topn_variants_uniq_pos['wt_count'] = topn - df_topn_variants_uniq_pos['mut_aa_count'].apply(sum)
 
-    df_topn_variants_uniq_pos.sort_values(by='ref_count', inplace=True)
+    df_topn_variants_uniq_pos.sort_values(by='wt_count', inplace=True)
     return df_topn_variants_uniq_pos
