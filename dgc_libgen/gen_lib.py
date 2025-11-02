@@ -69,7 +69,8 @@ def filter_pos_aa_for_library(df_top_uniq_pos,
     logger.info(f"Totally {len(df_top_uniq_pos_top)} positions are selected.")
 
     df_top_uniq_pos_top['fix_aa'] = [df_top_uniq_pos_top['mut_aa'].iloc[i][0] if df_top_uniq_pos_top['mut_aa_count'].iloc[i][0]/total_mutants >= fix_threshold else '' for i in range(len(df_top_uniq_pos_top)) ]
-    df_top_uniq_pos_top['sel_mut_aa'] = [list(aa  for aa, count in zip(row['mut_aa'], row['mut_aa_count']) if count/total_mutants >= aa_freq_threshold) + [row['wt_aa']] for i, row in df_top_uniq_pos_top.iterrows()]
+    df_top_uniq_pos_top['sel_mut_aa'] = [list(aa  for aa, count in zip(row['mut_aa'], row['mut_aa_count']) if count/total_mutants >= aa_freq_threshold) for i, row in df_top_uniq_pos_top.iterrows()]
+    df_top_uniq_pos_top['sel_mut_aa'] = [row['sel_mut_aa'] + [row['wt_aa']] if row['wt_count']/total_mutants >= aa_freq_threshold else row['sel_mut_aa'] for i, row in df_top_uniq_pos_top.iterrows()] # append wt_aa if its frequency is higher than threshold
     df_top_uniq_pos_top['dg_codons'], df_top_uniq_pos_top['expanded_codons'] = zip(*df_top_uniq_pos_top.apply(get_codons_from_aa, axis=1))
     df_top_uniq_pos_top['n_codons'] = [len(codons) for codons in df_top_uniq_pos_top.dg_codons]
     df_top_uniq_pos_top['n_expanded_codons'] = [len(codons) for codons in df_top_uniq_pos_top.expanded_codons]
