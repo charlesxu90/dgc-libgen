@@ -71,7 +71,9 @@ def filter_pos_aa_for_library(df_top_uniq_pos,
     df_top_uniq_pos_top['fix_aa'] = [df_top_uniq_pos_top['mut_aa'].iloc[i][0] if df_top_uniq_pos_top['mut_aa_count'].iloc[i][0]/total_mutants >= fix_threshold else '' for i in range(len(df_top_uniq_pos_top)) ]
     df_top_uniq_pos_top['sel_mut_aa'] = [list(aa  for aa, count in zip(row['mut_aa'], row['mut_aa_count']) if count/total_mutants >= aa_freq_threshold) for i, row in df_top_uniq_pos_top.iterrows()]
     df_top_uniq_pos_top['sel_mut_aa'] = [row['sel_mut_aa'] + [row['wt_aa']] if row['wt_count']/total_mutants >= aa_freq_threshold else row['sel_mut_aa'] for i, row in df_top_uniq_pos_top.iterrows()] # append wt_aa if its frequency is higher than threshold
-    df_top_uniq_pos_top['dg_codons'], df_top_uniq_pos_top['expanded_codons'] = zip(*df_top_uniq_pos_top.apply(get_codons_from_aa, axis=1))
+    codon_results = df_top_uniq_pos_top.apply(get_codons_from_aa, axis=1)
+    df_top_uniq_pos_top['dg_codons'] = [result[0] for result in codon_results]
+    df_top_uniq_pos_top['expanded_codons'] = [result[1] for result in codon_results]
     df_top_uniq_pos_top['n_codons'] = [len(codons) for codons in df_top_uniq_pos_top.dg_codons]
     df_top_uniq_pos_top['n_expanded_codons'] = [len(codons) for codons in df_top_uniq_pos_top.expanded_codons]
     library_size = np.prod([ n for n in df_top_uniq_pos_top.n_expanded_codons if n > 0])
@@ -101,23 +103,31 @@ def generate_library_for_topn(data_path,
     Returns:
         pd.DataFrame: The dataframe containing selected positions and amino acids for library design.
     """
+    
+    if not save_path:
+        save_path = data_path.replace('.csv', f'_library')
+
     df_variants = load_variants_data(data_path, pred_columns=pred_cols, seq_col=seq_col)
     df_variants_topn = get_topn_variants(df_variants, wt_seq=wt, topn=topn, seq_col=seq_col)
     df_topn_uniq_pos = get_topn_variants_pos_df(df_variants_topn, wt_seq=wt, topn=topn)
+    # df_topn_uniq_pos.to_csv(save_path + '_before_filt.csv', index=False)
     df_topn_uniq_pos = filter_pos_aa_for_library(df_topn_uniq_pos, total_mutants=topn, fix_threshold=fix_threshold, aa_freq_threshold=aa_freq_threshold)
+    # df_topn_uniq_pos.to_csv(save_path + '_filt.csv', index=False)
 
-    df_topn_uniq_pos = df_topn_uniq_pos[~(df_topn_uniq_pos['wt_aa'] == df_topn_uniq_pos['fix_aa'])].reset_index(drop=True)
+    # remove positions where fixed aa is same as wt_aa
+    df_topn_uniq_pos = df_topn_uniq_pos[~((df_topn_uniq_pos['fix_aa'] != '') & (df_topn_uniq_pos['wt_aa'] == df_topn_uniq_pos['fix_aa']))].reset_index(drop=True)
+    
+    # remove positions where not fixed, but only wt_aa is the option
+    df_topn_uniq_pos = df_topn_uniq_pos[~((df_topn_uniq_pos['fix_aa'] == '') & (df_topn_uniq_pos['sel_mut_aa'] == df_topn_uniq_pos.apply(lambda x: [x['wt_aa']], axis=1)))].reset_index(drop=True)
+    df_topn_uniq_pos.to_csv(save_path + '.csv', index=False)
     
     plot_style_utils.set_pub_plot_context(context="talk")
     fig, ax = plot_style_utils.simple_ax(figsize=(14, 3))
     plot_style_utils.prettify_ax(ax)
     fix_positions, weight_mat_df = get_aa_pos_weight(df_topn_uniq_pos)
     draw_weblogo(weight_mat_df, fix_positions, ax=ax)
-    if not save_path:
-        save_path = data_path.replace('.csv', f'_library')
 
     plot_style_utils.save_for_pub(fig, path=save_path)
-    df_topn_uniq_pos.to_csv(save_path + '.csv', index=False)
     logger.info(f"Figure and position table are saved to {save_path}.*")
     
     return df_topn_uniq_pos
