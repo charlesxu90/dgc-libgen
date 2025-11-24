@@ -114,6 +114,9 @@ def generate_library_for_topn(data_path,
     df_topn_uniq_pos = filter_pos_aa_for_library(df_topn_uniq_pos, total_mutants=topn, fix_threshold=fix_threshold, aa_freq_threshold=aa_freq_threshold)
     # df_topn_uniq_pos.to_csv(save_path + '_filt.csv', index=False)
 
+    # fix the position if only one aa allowed to mut after filtering
+    df_topn_uniq_pos['fix_aa'] = [row['sel_mut_aa'][0] if (len(row['sel_mut_aa']) == 1 and row['fix_aa'] == '') else row['fix_aa'] for i, row in df_topn_uniq_pos.iterrows()]
+
     # remove positions where fixed aa is same as wt_aa
     df_topn_uniq_pos = df_topn_uniq_pos[~((df_topn_uniq_pos['fix_aa'] != '') & (df_topn_uniq_pos['wt_aa'] == df_topn_uniq_pos['fix_aa']))].reset_index(drop=True)
     
